@@ -2,6 +2,9 @@ import sys
 import botocore
 import boto3
 import re
+import json
+
+from utils import _unzip_data
 
 
 def init_connection(bucket_name):
@@ -46,39 +49,52 @@ def get_subitems(bucket, prefix=''):
         
     return items
 
+
+
+def get_version_info(s3,bucket, s3_path):
+    print('App version is: %s' % s3_path)
+    version_target = s3_path.split('/')[2]
+    obj = s3.Object(bucket.name, '%s/%s/info.json' % (s3_path, version_target))
+    try:
+        content = obj.get()["Body"].read()
+        raw = _unzip_data(content)
+        data = json.loads(raw)
+    except botocore.exceptions.ClientError:
+        return None
+    except botocore.exceptions.BotoCoreError:
+        return None
+    return data
+
+
+def version_info(s3,bucket, s3_path):
+    info = get_version_info(s3, bucket, s3_path)
+    if info is None:
+        print('No info for version %s' % s3_path)
+        sys.exit(1)
+    for k in info.keys():
+        print('%s: %s' % (k, info[k]))
+
+def version_exists(s3_path):
+    files = bucket.objects.filter(Prefix=str(s3_path)).all()
+    return len(list(files)) > 0
+
 def list_version(bucket):
-    #branches = bucket.meta.client.list_objects(Bucket=bucket.name,Delimiter='/')
-    #for b in branches.get('CommonPrefixes'):
-    #    print(b)
    
-    '''items = bucket.meta.client.list_objects(Bucket=bucket.name, Prefix=branch + '/',  Delimiter='/')
-    
-        for i in items.get('CommonPrefixes'):
-            print(branch, clean_path(i.get('Prefix'), branch))
-            
-        '''
-    
         
     for branch in get_subitems(bucket, prefix=''):
-        #branch = b.get('Prefix')
+
         
         if re.search(r'^\D', branch):
         
             shas = get_subitems(bucket, prefix=branch + '/')
-        
-            #shas = bucket.meta.client.list_objects(Bucket=bucket.name,Prefix=branch, Delimiter='/')
-            
-            #shas = shas.get('CommonPrefixes')
+
             for sha in shas:
-                   
-                    #sha = s.get('Prefix')
+
                     nice_sha = clean_path(sha, branch)
                     # Full version path to display
 
                     if re.match('[0-9a-f]{7}$', nice_sha) is not None:
-                        
-                        print(branch, nice_sha)
-                        
+                       
                         builds = get_subitems(bucket, prefix=branch + '/' + nice_sha + '/')
                         for build in builds:
                         
@@ -88,6 +104,6 @@ def list_version(bucket):
                     else:
                         # Matching a version of the deployed branch
                         if re.match('[0-9]{10}', nice_sha):
-                            pass #print('Named branch: %s (version: %s)' % (branch.replace('/', ''), nice_sha))
+                            print('Named branch: %s (version: %s)' % (branch.replace('/', ''), nice_sha))
             else:
                 print('Not a official path for branch %s' % branch)

@@ -4,7 +4,8 @@ import sys
 import click
 import yaml
 
-from s3 import init_connection, list_version
+from s3 import init_connection, list_version, version_info
+
 
 
 def CommandWithConfigFile(config_file_param_name):
@@ -40,6 +41,19 @@ def another(ctx, config_file):
     ctx.obj = {
         'config_file': config_file,
     }
+    
+    
+@cli.command(name='info', cls=CommandWithConfigFile('config_file'))
+@click.option("--bucket", "-b", type=str, required=True)
+@click.option("--config_file", "-c", type=click.Path(),  required=True)
+@click.argument('s3_path')
+def info_version(s3_path,bucket, config_file):
+    print("bucket: {}".format(bucket))
+    print("config_file: {}".format(config_file))
+    
+    s3, s3client, bucket = init_connection(bucket)
+    
+    version_info(s3, bucket, s3_path)
 
 @cli.command(name='list', cls=CommandWithConfigFile('config_file'))
 @click.option("--bucket", "-b", type=str, required=True)
