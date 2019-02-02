@@ -20,46 +20,71 @@ def init_connection(bucket_name):
 
 # s3://$S3_MF_GEOADMIN3_INT/mom_webmerc_search/1812041829/
 
+# aws s3 ls s3://$S3_MF_GEOADMIN3_PROD/master/e9c53df/1807181420/
+''' Prefix master/
+    CommonPrefixes: master/e6eacb9/
+    Prefixes  None
+'''
 
 def clean_path(path, previous_path):
     return path.replace(previous_path, '').replace('/', '')
 
-def get_subitems(bucket, prefix=None):
+def get_subitems(bucket, prefix=''):
     items = []
     builds = bucket.meta.client.list_objects(Bucket=bucket.name,
+                                   Prefix=prefix,
                                    Delimiter='/')
-    if prefix is not None:
-        builds['Prefix'] = prefix
+
     for v in builds.get('CommonPrefixes'):
         build = v.get('Prefix')
-        items.append(build.replace(prefix, ''))
+       
+        if prefix is not None:
+            build = clean_path(build, prefix)
+        else:
+            build = v.replace('/','')
+        items.append(build)
         
     return items
 
 def list_version(bucket):
-    branches = bucket.meta.client.list_objects(Bucket=bucket.name,
-                                               Delimiter='/')
-    for b in branches.get('CommonPrefixes'):
-        branch = b.get('Prefix')
-        print(branch)
-        if re.search(r'^\D', branch):
-            shas = bucket.meta.client.list_objects(Bucket=bucket.name,
-                                                   Prefix=branch,
-                                                   Delimiter='/')
+    #branches = bucket.meta.client.list_objects(Bucket=bucket.name,Delimiter='/')
+    #for b in branches.get('CommonPrefixes'):
+    #    print(b)
+   
+    '''items = bucket.meta.client.list_objects(Bucket=bucket.name, Prefix=branch + '/',  Delimiter='/')
+    
+        for i in items.get('CommonPrefixes'):
+            print(branch, clean_path(i.get('Prefix'), branch))
             
-            shas = shas.get('CommonPrefixes')
-            if shas:
-                for s in shas:
-                    print(s)
-                    sha = s.get('Prefix')
+        '''
+    
+        
+    for branch in get_subitems(bucket, prefix=''):
+        #branch = b.get('Prefix')
+        
+        if re.search(r'^\D', branch):
+        
+            shas = get_subitems(bucket, prefix=branch + '/')
+        
+            #shas = bucket.meta.client.list_objects(Bucket=bucket.name,Prefix=branch, Delimiter='/')
+            
+            #shas = shas.get('CommonPrefixes')
+            for sha in shas:
+                   
+                    #sha = s.get('Prefix')
                     nice_sha = clean_path(sha, branch)
                     # Full version path to display
+
                     if re.match('[0-9a-f]{7}$', nice_sha) is not None:
-                        for build in get_subitems(bucket, prefix=sha):
                         
-                            print('Full version: %s%s/%s' % (branch,
+                        print(branch, nice_sha)
+                        
+                        builds = get_subitems(bucket, prefix=branch + '/' + nice_sha + '/')
+                        for build in builds:
+                        
+                            print('Full version: %s/%s/%s' % (branch,
                                                              nice_sha,
-                                                             clean_path(build, sha) ))
+                                                             clean_path(build, nice_sha) ))
                     else:
                         # Matching a version of the deployed branch
                         if re.match('[0-9]{10}', nice_sha):
