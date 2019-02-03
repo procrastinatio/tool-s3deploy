@@ -39,6 +39,32 @@ mimetypes.add_type('image/x-icon', '.cur')
 prd/cache/service --> /master/eebba2c/1807181149/1807181149/
 
 
+src
+
+
+aws s3 ls   s3://$S3_MF_GEOADMIN3_PROD/master/eebba2c/1807181149/src/
+                           PRE components/
+                           PRE img/
+                           PRE js/
+                           PRE lib/
+                           PRE locales/
+                           PRE style/
+2018-07-18 11:50:06      71915 404.html
+2018-07-18 11:50:06      11251 TemplateCacheModule.js
+2018-07-18 11:50:06         23 checker
+2018-07-18 11:50:06       3472 deps.js
+2018-07-18 11:50:06       6238 embed.html
+2018-07-18 11:50:06       9278 index.html
+2018-07-18 11:49:59      47456 layersConfig.de.json
+2018-07-18 11:49:59      49396 layersConfig.en.json
+2018-07-18 11:49:59      50589 layersConfig.fr.json
+2018-07-18 11:49:59      49941 layersConfig.it.json
+2018-07-18 11:49:59      49898 layersConfig.rm.json
+2018-07-18 11:50:06       9280 mobile.html
+2018-07-18 11:49:59        956 services
+
+
+
 is_chsdi_cache = bool(file_base_path.endswith('cache'))
                         local_file = os.path.join(file_base_path, file_name)
                         relative_file_path = file_base_path.replace('cache', '')
@@ -71,6 +97,8 @@ def geoadmin_relative_file_path_rule(base_dir, directory,file_name,  file_base_p
             relative_file_path = relative_file_path.replace('prd', '')
         else:
             relative_file_path = relative_file_path.replace('prd', version)
+            
+    # files in prd/cache i.e. prd/cache/layersConfig.en.json and prd/cache/service
     if bool(file_base_path.endswith('cache')):
         
         relative_file_path = version
@@ -96,8 +124,6 @@ def get_files_to_upload(bucket_name=None, base_dir=None, s3_dir_path=None, proje
                     if len([p for p in exclude_files if p in file_name]) == 0:
                         local_file = os.path.join(file_base_path, file_name)
                         # Special rules for geoadmin
-                        # files in prd/cache i.e. prd/cache/layersConfig.en.json and prd/cache/services
-                        is_chsdi_cache = bool(file_base_path.endswith('cache'))
                         if 'geoadmin' in project:
                             
                             relative_file_path = geoadmin_relative_file_path_rule(base_dir, directory,file_name,  file_base_path, root_files, version)
