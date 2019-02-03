@@ -156,17 +156,18 @@ def list_version(bucket):
                 print("Not a official path for branch %s" % branch)
                 
                 
-def upload_to_s3(bucket_name=None, base_dir=None, deploy_target=None, named_branch=None, git_branch=None, upload_directories=None,root_files=None,exclude_files=None,  **cfg):
-    s3_dir_path, version = create_s3_dir_path(base_dir, named_branch, git_branch)
+def upload_to_s3(cfg):
+    s3_dir_path, version = create_s3_dir_path(cfg['base_dir'], cfg['named_branch'], cfg['git_branch'])
     print('Destination folder is:')
     print('%s' % s3_dir_path)
 
     cfg['version'] = version
-    root_files = [s.format(**cfg) for s in root_files]
+    cfg['root_files'] = [s.format(**cfg) for s in cfg['root_files']]
+    cfg['s3_dir_path'] = s3_dir_path
     
   
     
-    files = get_files_to_upload(bucket_name, base_dir, s3_dir_path, named_branch, version, upload_directories, exclude_files, root_files)
+    files = get_files_to_upload( **cfg) #s3_dir_path, named_branch, version, upload_directories, exclude_files, root_files)
     
                         
     #with open('mf-geoadmin3_s3deploy.json', 'w') as f:

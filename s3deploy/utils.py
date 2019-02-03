@@ -30,11 +30,11 @@ def geoadmin_relative_file_path_rule(directory,file_name,  file_base_path, root_
     
     
 
-def get_files_to_upload(bucket_name, base_dir, s3_dir_path, named_branch, version, upload_directories, exclude_filename_patterns, root_files):
-
-    project='geoadmin'
+def get_files_to_upload(bucket_name=None, base_dir=None, s3_dir_path=None, project=None, named_branch=None, compress=True, skip_compress=[], version=None, upload_directories=None, exclude_files=None, root_files=None, **kwargs): #base_dir, s3_dir_path, named_branch, version, upload_directories, exclude_filename_patterns, root_files):
     
+   
     files = []
+    compressed = False
     
     for directory in upload_directories:
         for file_path_list in os.walk(os.path.join(base_dir, directory)):
@@ -42,7 +42,7 @@ def get_files_to_upload(bucket_name, base_dir, s3_dir_path, named_branch, versio
             if len(file_names) > 0:
                 file_base_path = file_path_list[0]
                 for file_name in file_names:
-                    if len([p for p in exclude_filename_patterns if p in file_name]) == 0:
+                    if len([p for p in exclude_files if p in file_name]) == 0:
                         local_file = os.path.join(file_base_path, file_name)
                         # Special rules for geoadmin
                         # files in prd/cache i.e. prd/cache/layersConfig.en.json and prd/cache/services
@@ -52,13 +52,25 @@ def get_files_to_upload(bucket_name, base_dir, s3_dir_path, named_branch, versio
                         else:
                             # TODO check
                             relative_file_path = file_base_path.replace(base_dir + '/', '')
+                            
+                       
                         remote_file = os.path.join(s3_dir_path, relative_file_path, file_name)
                         # Don't cache some files
                         cached = is_cached(file_name, named_branch)
                         mimetype = get_file_mimetype(local_file)
                         
+
+                        # Also upload chsdi metadata file to src folder if available
+                        if is_chsdi_cache:
+                            relative_file_path = relative_file_path.replace(version + '/', '')
+                            remote_file = os.path.join(s3_dir_path, 'src/', relative_file_path, file_name)
+                            
+                        if compress and mimetype not in skip_compress:
+                            compressed = True
+                            
+                            
                         file_dict = {'local_name': local_file, 'remote_name':  remote_file,'bucket_name':  bucket_name,'cached': cached, 'mimetype':mimetype,
-                                     'is_chsdi_cache': is_chsdi_cache}
+                                     'is_chsdi_cache': is_chsdi_cache, compressed: compressed}
                         
                         files.append(file_dict)
     return files                    

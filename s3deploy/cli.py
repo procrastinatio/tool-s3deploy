@@ -106,7 +106,7 @@ def upload_version(ctx,  bucket_name, named_branch ,base_dir, url_name, git_bran
     
    
    
-    upload_to_s3(**config_data)
+    upload_to_s3(config_data)
 
 
 if __name__ == "__main__":
