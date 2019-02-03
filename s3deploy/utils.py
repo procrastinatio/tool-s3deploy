@@ -4,6 +4,7 @@ import gzip
 import json
 import mimetypes
 import os
+from datetime import datetime
 
 mimetypes.init()
 mimetypes.add_type('application/x-font-ttf', '.ttf')
@@ -34,7 +35,7 @@ def get_files_to_upload(bucket_name=None, base_dir=None, s3_dir_path=None, proje
     
    
     files = []
-    compressed = False
+    to_compress = False
     
     for directory in upload_directories:
         for file_path_list in os.walk(os.path.join(base_dir, directory)):
@@ -66,14 +67,33 @@ def get_files_to_upload(bucket_name=None, base_dir=None, s3_dir_path=None, proje
                             remote_file = os.path.join(s3_dir_path, 'src/', relative_file_path, file_name)
                             
                         if compress and mimetype not in skip_compress:
-                            compressed = True
+                            to_compress = True
                             
                             
                         file_dict = {'local_name': local_file, 'remote_name':  remote_file,'bucket_name':  bucket_name,'cached': cached, 'mimetype':mimetype,
-                                     'is_chsdi_cache': is_chsdi_cache, compressed: compressed}
+                                     'is_chsdi_cache': is_chsdi_cache, 'to_compress': to_compress}
                         
                         files.append(file_dict)
-    return files                    
+    return files   
+
+
+def headers_extra_args(to_compress, cached):
+    extra_args = {}
+ 
+    if to_compress:
+        extra_args['ContentEncoding'] = 'gzip'
+
+
+    if cached is False:
+        extra_args['CacheControl'] = 'max-age=0, must-revalidate, s-maxage=300'
+        extra_args['Expires'] = datetime(1990, 1, 1)
+        extra_args['Metadata'] = {'Pragma': 'no-cache', 'Vary': '*'}
+    else:
+        extra_args['CacheControl'] = 'max-age=31536000, public'
+
+    extra_args['ACL'] = 'public-read'
+    
+    return extra_args
         
 
 
@@ -95,11 +115,15 @@ def is_cached(file_name, named_branch):
     _, extension = os.path.splitext(file_name)
     return bool(extension not in ['.html', '.txt', '.appcache', ''])
 
+
+
+
+
 def _gzip_data(data):
     out = None
-    infile = StringIO()
+    infile = BytesIO()
     try:
-        gzip_file = gzip.GzipFile(fileobj=infile, mode='w', compresslevel=5)
+        gzip_file = gzip.GzipFile(fileobj=infile, mode='wb', compresslevel=5)
         gzip_file.write(data)
         gzip_file.close()
         infile.seek(0)

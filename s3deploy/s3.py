@@ -5,7 +5,7 @@ import boto3
 import re
 import json
 
-from utils import _unzip_data, is_cached, get_file_mimetype, get_files_to_upload
+from utils import _unzip_data, _gzip_data, is_cached, get_file_mimetype, get_files_to_upload, headers_extra_args
 
 from git import create_s3_dir_path
 
@@ -156,7 +156,7 @@ def list_version(bucket):
                 print("Not a official path for branch %s" % branch)
                 
                 
-def upload_to_s3(cfg):
+def upload_to_s3(s3, cfg):
     s3_dir_path, version = create_s3_dir_path(cfg['base_dir'], cfg['named_branch'], cfg['git_branch'])
     print('Destination folder is:')
     print('%s' % s3_dir_path)
@@ -173,4 +173,39 @@ def upload_to_s3(cfg):
     #with open('mf-geoadmin3_s3deploy.json', 'w') as f:
     #    f.write(json.dumps(files, indent=4))
     for f in files:
-             print(f)
+             save_to_s3(s3, **f)
+             
+def save_to_s3(s3, local_name=None, remote_name=None, bucket_name=None, to_compress=False, cached=True, mimetype=None, break_on_error=False, **kwargs):
+    try:
+        with open(local_name, 'rb') as f:
+            data = f.read()
+    except EnvironmentError as e:
+        print('Failed to upload %s' % local_name)
+        print(str(e))
+        if break_on_error:
+            print("Exiting...")
+            sys.exit(1)
+        else:
+            return False
+    _save_to_s3(s3, data, remote_name, mimetype, bucket_name, cached=cached, to_compress=to_compress)
+
+
+def _save_to_s3(s3, in_data, dest, mimetype, bucket_name, to_compress=True, cached=True):
+    data = in_data
+    extra_args = {}
+ 
+    if to_compress:
+        data = _gzip_data(in_data)
+    
+    extra_args = headers_extra_args(to_compress, cached)
+
+    extra_args['ContentType'] = mimetype
+
+    try:
+        print('Uploading to %s - %s, gzip: %s, cache headers: %s' % (dest, mimetype, to_compress, cached))
+          
+
+        # TODO: do nothig
+        s3.Object(bucket_name, dest).put(Body=data, **extra_args)
+    except Exception as e:
+        print('Error while uploading %s: %s' % (dest, e))
