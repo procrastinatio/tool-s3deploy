@@ -1,16 +1,18 @@
 import sys
-import os
+import json
+import re
 import botocore
 import boto3
-import re
-import json
 
-from utils import _unzip_data, _gzip_data, is_cached, get_file_mimetype, get_files_to_upload, headers_extra_args
+from utils import _unzip_data, _gzip_data, get_files_to_upload, headers_extra_args
 
 from git import create_s3_dir_path
 
 
 def init_connection(bucket_name):
+    """ Init the S3 connection
+     
+    """
     try:
         session = boto3.session.Session()
     except botocore.exceptions.BotoCoreError as e:
@@ -47,6 +49,9 @@ def clean_path(path, previous_path):
 
 
 def get_subitems(bucket, prefix=""):
+    """Get all subkeys of an items
+
+    """
     items = []
     builds = bucket.meta.client.list_objects(
         Bucket=bucket.name, Prefix=prefix, Delimiter="/"
@@ -61,6 +66,8 @@ def get_subitems(bucket, prefix=""):
 
 
 def get_version_info(s3, bucket, s3_path):
+    """Get build metadata
+    """
     print("App version is: %s" % s3_path)
     version_target = s3_path.split("/")[2]
     obj = s3.Object(bucket.name, "%s/%s/info.json" % (s3_path, version_target))
@@ -121,12 +128,17 @@ many version
 
 
 def version_exists(s3_path):
+    """Check if a given version exists in the given bucket
+    
+    """
     files = bucket.objects.filter(Prefix=str(s3_path)).all()
     return len(list(files)) > 0
 
 
 def list_version(bucket):
-
+    """List all versions in a given bucket
+    
+    """
     for branch in get_subitems(bucket, prefix=""):
 
         # if re.search(r"^\D", branch):  # branch's name may have number!!!
@@ -162,6 +174,9 @@ def list_version(bucket):
 
 
 def upload_to_s3(s3, cfg):
+    """Uploads a dir to a bucket given a configuration
+
+    """
     s3_dir_path, version = create_s3_dir_path(
         cfg['base_dir'], cfg['named_branch'], cfg['git_branch'])
     print('Destination folder is:')
@@ -186,12 +201,6 @@ def upload_to_s3(s3, cfg):
             save_to_s3(s3, **f)
 
 
-def upload(myfile):
-    bucket = conn.get_bucket("parallel_upload_tests")
-    key = bucket.new_key(myfile).set_contents_from_string('some content')
-    return myfile
-
-
 def save_to_s3(
         s3,
         local_name=None,
@@ -202,6 +211,9 @@ def save_to_s3(
         mimetype=None,
         break_on_error=False,
         **kwargs):
+    '''Reading data for uploading to S3
+    
+    '''
     try:
         with open(local_name, 'rb') as f:
             data = f.read()
@@ -231,6 +243,9 @@ def _save_to_s3(
         bucket_name,
         to_compress=True,
         cached=True):
+    '''Uploading data to S3
+    
+    '''
     data = in_data
     extra_args = {}
 

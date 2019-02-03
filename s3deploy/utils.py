@@ -64,27 +64,6 @@ aws s3 ls   s3://$S3_MF_GEOADMIN3_PROD/master/eebba2c/1807181149/src/
 2018-07-18 11:49:59        956 services
 
 
-
-is_chsdi_cache = bool(file_base_path.endswith('cache'))
-                        local_file = os.path.join(file_base_path, file_name)
-                        relative_file_path = file_base_path.replace('cache', '')
-                        if directory == 'prd':
-                            # Take only files directly in prd/
-                            if file_name in root_files and relative_file_path.endswith('prd'):
-                                relative_file_path = relative_file_path.replace('prd', '')
-                            else:
-                                relative_file_path = relative_file_path.replace('prd', version)
-                        relative_file_path = relative_file_path.replace(base_dir + '/', '')
-                        remote_file = os.path.join(s3_dir_path, relative_file_path, file_name)
-                        # Don't cache some files
-                        cached = is_cached(file_name, named_branch)
-                        mimetype = get_file_mimetype(local_file)
-                        save_to_s3(local_file, remote_file, bucket_name, cached=cached, mimetype=mimetype)
-                        # Also upload chsdi metadata file to src folder if available
-                        if is_chsdi_cache:
-                            relative_file_path = relative_file_path.replace(version + '/', '')
-                            remote_file = os.path.join(s3_dir_path, 'src/', relative_file_path, file_name)
-                            save_to_s3(local_file, remote_file, bucket_name, cached=cached, mimetype=mimetype)
 '''
 
 
@@ -95,8 +74,9 @@ def geoadmin_relative_file_path_rule(
         file_base_path,
         root_files,
         version):
-
-    #relative_file_path = file_base_path.replace('cache', '')
+    '''Magic for geoadmin path (don't ask, it works)
+    
+    '''
     if directory == 'prd':
         # Take only files directly in prd/
         relative_file_path = file_base_path.replace(base_dir + '/', '')
@@ -108,7 +88,6 @@ def geoadmin_relative_file_path_rule(
     # files in prd/cache i.e. prd/cache/layersConfig.en.json and
     # prd/cache/service
     if bool(file_base_path.endswith('cache')):
-
         relative_file_path = version
 
     return relative_file_path
@@ -127,6 +106,9 @@ def get_files_to_upload(
         exclude_files=None,
         root_files=None,
         **kwargs):  # base_dir, s3_dir_path, named_branch, version, upload_directories, exclude_filename_patterns, root_files):
+    '''Traverse the directory to get files for upload
+    
+    '''
 
     files = []
     to_compress = False
@@ -179,7 +161,9 @@ def get_files_to_upload(
 
 
 def headers_extra_args(to_compress, cached):
-    cached = False  # TODO
+    '''Returns specifics s3 object header for compressed/cached data
+    
+    '''
     extra_args = {}
 
     if to_compress:
@@ -198,6 +182,10 @@ def headers_extra_args(to_compress, cached):
 
 
 def get_file_mimetype(local_file):
+    '''Guessing the file mimetype (S3 doesn't do any magic)
+    
+    '''
+
     if local_file.endswith('services'):
         return 'application/json'
     else:
@@ -218,6 +206,9 @@ def is_cached(file_name, named_branch):
 
 
 def _gzip_data(data):
+    ''' Reads and gzip a data
+    
+    '''
     out = None
     infile = BytesIO()
     try:
