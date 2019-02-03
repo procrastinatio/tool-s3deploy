@@ -2,9 +2,11 @@
 import subprocess
 import os.path
 
+
 def local_git_last_commit(basedir):
     try:
-        output = subprocess.check_output(('git rev-parse HEAD',), cwd=basedir, shell=True)
+        output = subprocess.check_output(
+            ('git rev-parse HEAD',), cwd=basedir, shell=True)
         return output.decode('ascii', 'ignore').strip()
     except subprocess.CalledProcessError:
         print('Not a git directory: %s' % basedir)
@@ -18,7 +20,8 @@ def local_git_last_commit(basedir):
 
 
 def local_git_branch(basedir):
-    output = subprocess.check_output(('git rev-parse --abbrev-ref HEAD',), cwd=basedir, shell=True)
+    output = subprocess.check_output(
+        ('git rev-parse --abbrev-ref HEAD',), cwd=basedir, shell=True)
     return output.decode('ascii', 'ignore').strip()
 
 

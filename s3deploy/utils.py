@@ -87,8 +87,15 @@ is_chsdi_cache = bool(file_base_path.endswith('cache'))
                             save_to_s3(local_file, remote_file, bucket_name, cached=cached, mimetype=mimetype)
 '''
 
-def geoadmin_relative_file_path_rule(base_dir, directory,file_name,  file_base_path, root_files, version):
-    
+
+def geoadmin_relative_file_path_rule(
+        base_dir,
+        directory,
+        file_name,
+        file_base_path,
+        root_files,
+        version):
+
     #relative_file_path = file_base_path.replace('cache', '')
     if directory == 'prd':
         # Take only files directly in prd/
@@ -97,24 +104,33 @@ def geoadmin_relative_file_path_rule(base_dir, directory,file_name,  file_base_p
             relative_file_path = relative_file_path.replace('prd', '')
         else:
             relative_file_path = relative_file_path.replace('prd', version)
-            
-    # files in prd/cache i.e. prd/cache/layersConfig.en.json and prd/cache/service
-    if bool(file_base_path.endswith('cache')):
-        
-        relative_file_path = version
-        
-            
-            
-    return relative_file_path
-    
-    
 
-def get_files_to_upload(bucket_name=None, base_dir=None, s3_dir_path=None, project=None, named_branch=None, compress=True, skip_compress=[], version=None, upload_directories=None, exclude_files=None, root_files=None, **kwargs): #base_dir, s3_dir_path, named_branch, version, upload_directories, exclude_filename_patterns, root_files):
-    
-   
+    # files in prd/cache i.e. prd/cache/layersConfig.en.json and
+    # prd/cache/service
+    if bool(file_base_path.endswith('cache')):
+
+        relative_file_path = version
+
+    return relative_file_path
+
+
+def get_files_to_upload(
+        bucket_name=None,
+        base_dir=None,
+        s3_dir_path=None,
+        project=None,
+        named_branch=None,
+        compress=True,
+        skip_compress=[],
+        version=None,
+        upload_directories=None,
+        exclude_files=None,
+        root_files=None,
+        **kwargs):  # base_dir, s3_dir_path, named_branch, version, upload_directories, exclude_filename_patterns, root_files):
+
     files = []
     to_compress = False
-    
+
     for directory in upload_directories:
         for file_path_list in os.walk(os.path.join(base_dir, directory)):
             file_names = file_path_list[2]
@@ -125,44 +141,49 @@ def get_files_to_upload(bucket_name=None, base_dir=None, s3_dir_path=None, proje
                         local_file = os.path.join(file_base_path, file_name)
                         # Special rules for geoadmin
                         if 'geoadmin' in project:
-                            
-                            relative_file_path = geoadmin_relative_file_path_rule(base_dir, directory,file_name,  file_base_path, root_files, version)
+
+                            relative_file_path = geoadmin_relative_file_path_rule(
+                                base_dir, directory, file_name, file_base_path, root_files, version)
                             #print('geoadmin stuff', relative_file_path, directory, file_name, file_base_path.replace(base_dir + '/', ''))
                         else:
                             # TODO check
-                            relative_file_path = file_base_path.replace(base_dir + '/', '')
-                            
-                       
-                        remote_file = os.path.join(s3_dir_path, relative_file_path, file_name)
+                            relative_file_path = file_base_path.replace(
+                                base_dir + '/', '')
+
+                        remote_file = os.path.join(
+                            s3_dir_path, relative_file_path, file_name)
                         # Don't cache some files
                         cached = is_cached(file_name, named_branch)
                         mimetype = get_file_mimetype(local_file)
-                        
 
                         # Also upload chsdi metadata file to src folder if available
                         # TODO what the hell is this?
                         # if is_chsdi_cache:
                         #    relative_file_path = relative_file_path.replace(version + '/', '')
                         #    remote_file = os.path.join(s3_dir_path, 'src/', relative_file_path, file_name)
-                            
+
                         if compress and mimetype not in skip_compress:
                             to_compress = True
-                            
-                            
-                        file_dict = {'local_name': local_file, 'remote_name':  remote_file,'bucket_name':  bucket_name,'cached': cached, 'mimetype':mimetype,
-                                     'is_chsdi_cache': is_chsdi_cache, 'to_compress': to_compress}
-                        
+
+                        file_dict = {
+                            'local_name': local_file,
+                            'remote_name': remote_file,
+                            'bucket_name': bucket_name,
+                            'cached': cached,
+                            'mimetype': mimetype,
+                            'is_chsdi_cache': is_chsdi_cache,
+                            'to_compress': to_compress}
+
                         files.append(file_dict)
-    return files   
+    return files
 
 
 def headers_extra_args(to_compress, cached):
-    cached = False # TODO
+    cached = False  # TODO
     extra_args = {}
- 
+
     if to_compress:
         extra_args['ContentEncoding'] = 'gzip'
-
 
     if cached is False:
         extra_args['CacheControl'] = 'max-age=0, must-revalidate, s-maxage=300'
@@ -172,9 +193,8 @@ def headers_extra_args(to_compress, cached):
         extra_args['CacheControl'] = 'max-age=31536000, public'
 
     extra_args['ACL'] = 'public-read'
-    
+
     return extra_args
-        
 
 
 def get_file_mimetype(local_file):
@@ -186,6 +206,7 @@ def get_file_mimetype(local_file):
             return mimetype
         return 'text/plain'
 
+
 def is_cached(file_name, named_branch):
     if named_branch:
         return False
@@ -194,9 +215,6 @@ def is_cached(file_name, named_branch):
         return True
     _, extension = os.path.splitext(file_name)
     return bool(extension not in ['.html', '.txt', '.appcache', ''])
-
-
-
 
 
 def _gzip_data(data):
@@ -208,7 +226,7 @@ def _gzip_data(data):
         gzip_file.close()
         infile.seek(0)
         out = infile.getvalue()
-    except:
+    except BaseException:
         out = None
     finally:
         infile.close()

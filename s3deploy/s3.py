@@ -15,16 +15,17 @@ def init_connection(bucket_name):
         session = boto3.session.Session()
     except botocore.exceptions.BotoCoreError as e:
         print(
-            'Cannot establish connection to bucket "%s". Check you credentials.'
-            % bucket_name
-        )
+            'Cannot establish connection to bucket "%s". Check you credentials.' %
+            bucket_name)
         print(e)
         sys.exit(1)
 
     s3client = session.client(
         "s3", config=boto3.session.Config(signature_version="s3v4")
     )
-    s3 = session.resource("s3", config=boto3.session.Config(signature_version="s3v4"))
+    s3 = session.resource(
+        "s3", config=boto3.session.Config(
+            signature_version="s3v4"))
 
     bucket = s3.Bucket(bucket_name)
     return (s3, s3client, bucket)
@@ -82,6 +83,7 @@ def version_info(s3, bucket, s3_path):
     for k in info.keys():
         print("%s: %s" % (k, info[k]))
 
+
 '''
 1/ Not a official path for branch fix_4200
 
@@ -116,6 +118,8 @@ many version
 
 
 '''
+
+
 def version_exists(s3_path):
     files = bucket.objects.filter(Prefix=str(s3_path)).all()
     return len(list(files)) > 0
@@ -125,7 +129,7 @@ def list_version(bucket):
 
     for branch in get_subitems(bucket, prefix=""):
 
-        #if re.search(r"^\D", branch):  # branch's name may have number!!!
+        # if re.search(r"^\D", branch):  # branch's name may have number!!!
         if re.search(r"^[a-z0-9_-]", branch):
 
             shas = get_subitems(bucket, prefix=branch + "/")
@@ -137,14 +141,15 @@ def list_version(bucket):
 
                 if re.match("[0-9a-f]{7}$", nice_sha) is not None:
 
-                    builds = get_subitems(bucket, prefix=branch + "/" + nice_sha + "/")
+                    builds = get_subitems(
+                        bucket, prefix=branch + "/" + nice_sha + "/")
                     for build in builds:
                         if re.match("[0-9]{10}", build):
 
-                          print(
-                            "Full version: %s/%s/%s"
-                            % (branch, nice_sha, clean_path(build, nice_sha))
-                          )
+                            print(
+                                "Full version: %s/%s/%s" %
+                                (branch, nice_sha, clean_path(
+                                    build, nice_sha)))
                 else:
                     # Matching a version of the deployed branch (it is olds ?)
                     if re.match("[0-9]{10}", nice_sha):
@@ -154,39 +159,49 @@ def list_version(bucket):
                         )
             else:
                 print("Not a official path for branch %s" % branch)
-                
-                
+
+
 def upload_to_s3(s3, cfg):
-    s3_dir_path, version = create_s3_dir_path(cfg['base_dir'], cfg['named_branch'], cfg['git_branch'])
+    s3_dir_path, version = create_s3_dir_path(
+        cfg['base_dir'], cfg['named_branch'], cfg['git_branch'])
     print('Destination folder is:')
     print('%s' % s3_dir_path)
 
     cfg['version'] = version
     cfg['root_files'] = [s.format(**cfg) for s in cfg['root_files']]
     cfg['s3_dir_path'] = s3_dir_path
-    
-  
-    
-    files = get_files_to_upload( **cfg) #s3_dir_path, named_branch, version, upload_directories, exclude_files, root_files)
-    
-                        
-    #with open('mf-geoadmin3_s3deploy.json', 'w') as f:
+
+    # s3_dir_path, named_branch, version, upload_directories, exclude_files,
+    # root_files)
+    files = get_files_to_upload(**cfg)
+
+    # with open('mf-geoadmin3_s3deploy.json', 'w') as f:
     #    f.write(json.dumps(files, indent=4))
-    
+
     for f in files:
         if cfg['noop']:
-           if 'Cesium' not in f['local_name'] and 'awesome' not in f['local_name']:
-               print(json.dumps(f, indent=4))
+            if 'Cesium' not in f['local_name'] and 'awesome' not in f['local_name']:
+                print(json.dumps(f, indent=4))
         else:
-             save_to_s3(s3, **f)
-             
- 
+            save_to_s3(s3, **f)
+
+
 def upload(myfile):
-        bucket = conn.get_bucket("parallel_upload_tests")
-        key = bucket.new_key(myfile).set_contents_from_string('some content')
-        return myfile
-             
-def save_to_s3(s3, local_name=None, remote_name=None, bucket_name=None, to_compress=False, cached=True, mimetype=None, break_on_error=False, **kwargs):
+    bucket = conn.get_bucket("parallel_upload_tests")
+    key = bucket.new_key(myfile).set_contents_from_string('some content')
+    return myfile
+
+
+def save_to_s3(
+        s3,
+        local_name=None,
+        remote_name=None,
+        bucket_name=None,
+        to_compress=False,
+        cached=True,
+        mimetype=None,
+        break_on_error=False,
+        **kwargs):
     try:
         with open(local_name, 'rb') as f:
             data = f.read()
@@ -198,23 +213,37 @@ def save_to_s3(s3, local_name=None, remote_name=None, bucket_name=None, to_compr
             sys.exit(1)
         else:
             return False
-    _save_to_s3(s3, data, remote_name, mimetype, bucket_name, cached=cached, to_compress=to_compress)
+    _save_to_s3(
+        s3,
+        data,
+        remote_name,
+        mimetype,
+        bucket_name,
+        cached=cached,
+        to_compress=to_compress)
 
 
-def _save_to_s3(s3, in_data, dest, mimetype, bucket_name, to_compress=True, cached=True):
+def _save_to_s3(
+        s3,
+        in_data,
+        dest,
+        mimetype,
+        bucket_name,
+        to_compress=True,
+        cached=True):
     data = in_data
     extra_args = {}
- 
+
     if to_compress:
         data = _gzip_data(in_data)
-    
+
     extra_args = headers_extra_args(to_compress, cached)
 
     extra_args['ContentType'] = mimetype
 
     try:
-        print('Uploading to %s - %s, gzip: %s, cache headers: %s' % (dest, mimetype, to_compress, cached))
-          
+        print('Uploading to %s - %s, gzip: %s, cache headers: %s' %
+              (dest, mimetype, to_compress, cached))
 
         # TODO: do nothig
         s3.Object(bucket_name, dest).put(Body=data, **extra_args)

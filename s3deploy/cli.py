@@ -9,7 +9,7 @@ from s3 import init_connection, list_version, version_info, upload_to_s3
 
 
 def get_file_dir():
-       return os.path.dirname(os.path.realpath(__file__))
+    return os.path.dirname(os.path.realpath(__file__))
 
 
 def CommandWithConfigFile(config_file_param_name):
@@ -26,13 +26,13 @@ def CommandWithConfigFile(config_file_param_name):
                         for param, value in cli_params.items():
                             print(param, value)
                             config_data[param] = cli_params[param]
-                               
+
                          ctx['config_data'] = config_data'''
-                   
+
                         for param, value in ctx.params.items():
                             if value is None and param in config_data:
                                 ctx.params[param] = config_data[param]
-                      
+
                 except IOError:
                     print("Cannot open file {}".format(config_file))
                     sys.exit()
@@ -78,35 +78,56 @@ def list_versions(ctx, bucket, config_file):
     s3, s3client, bucket = init_connection(bucket)
 
     print(list_version(bucket))
-    
+
 
 @cli.command(name="upload", cls=CommandWithConfigFile("config_file"))
 @click.option("--bucket", "-b", "bucket_name", type=str, required=True)
-@click.option("--named_branch",  "named_branch",is_flag=True, default=False, help="Print more output.")
-@click.option("--noop",  "-n",is_flag=True, default=False, help="Print more output.")
-@click.option("--base_dir","-d",   "base_dir", type=str, default=get_file_dir(), required=False)
+@click.option(
+    "--named_branch",
+    "named_branch",
+    is_flag=True,
+    default=False,
+    help="Print more output.")
+@click.option(
+    "--noop",
+    "-n",
+    is_flag=True,
+    default=False,
+    help="Print more output.")
+@click.option(
+    "--base_dir",
+    "-d",
+    "base_dir",
+    type=str,
+    default=get_file_dir(),
+    required=False)
 @click.option("--url", "-u", "url_name", type=str, required=False)
 @click.option("--config_file", "-c", type=click.Path(), required=True)
-@click.option("--git_branch","-g", type=str, default=None, required=False)
+@click.option("--git_branch", "-g", type=str, default=None, required=False)
 @click.pass_context
-def upload_version(ctx,  bucket_name, named_branch ,base_dir, url_name, git_branch, config_file, noop):
+def upload_version(
+        ctx,
+        bucket_name,
+        named_branch,
+        base_dir,
+        url_name,
+        git_branch,
+        config_file,
+        noop):
     print("bucket: {}".format(bucket_name))
     print("config_file: {}".format(config_file))
     print("base_dir: {}".format(base_dir))
     print(ctx.params)
-    
+
     with open(config_file) as f:
         config_data = yaml.load(f)
         for param, value in ctx.params.items():
             config_data[param] = ctx.params[param]
-            
-            
+
     print(json.dumps(config_data, indent=4))
-    
-    
+
     s3, s3client, bucket = init_connection(bucket_name)
-   
-   
+
     upload_to_s3(s3, config_data)
 
 
