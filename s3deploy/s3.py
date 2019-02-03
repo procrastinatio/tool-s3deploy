@@ -1,10 +1,13 @@
 import sys
+import os
 import botocore
 import boto3
 import re
 import json
 
 from utils import _unzip_data
+
+from git import create_s3_dir_path
 
 
 def init_connection(bucket_name):
@@ -151,3 +154,22 @@ def list_version(bucket):
                         )
             else:
                 print("Not a official path for branch %s" % branch)
+                
+                
+def upload_to_s3(bucket_name, base_dir, deploy_target, named_branch, git_branch):
+    s3_dir_path, version = create_s3_dir_path(base_dir, named_branch, git_branch)
+    print('Destination folder is:')
+    print('%s' % s3_dir_path)
+    upload_directories = ['prd', 'src']
+    exclude_filename_patterns = ['.less', '.gitignore', '.mako.']
+    root_files = ('index.html', 'mobile.html', 'embed.html', '404.html',
+                  'robots.txt', 'robots_prod.txt', 'favicon.ico',
+                  'checker', 'geoadmin.%s.appcache' % version)
+    
+    for directory in upload_directories:
+        for file_path_list in os.walk(os.path.join(base_dir, directory)):
+            file_names = file_path_list[2]
+            if len(file_names) > 0:
+                file_base_path = file_path_list[0]
+                for file_name in file_names:
+                    print(file_name)
