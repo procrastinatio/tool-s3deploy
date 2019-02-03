@@ -2,6 +2,7 @@
 import os
 import sys
 import click
+import json
 import yaml
 
 from s3 import init_connection, list_version, version_info, upload_to_s3
@@ -93,11 +94,19 @@ def upload_version(ctx,  bucket_name, named_branch ,base_dir, url_name, git_bran
     print("base_dir: {}".format(base_dir))
     print(ctx.params)
     
+    with open(config_file) as f:
+        config_data = yaml.load(f)
+        for param, value in ctx.params.items():
+            config_data[param] = ctx.params[param]
+            
+            
+    print(json.dumps(config_data, indent=4))
+    
     
     
    
    
-    upload_to_s3(bucket_name, base_dir, named_branch, git_branch, git_branch)
+    upload_to_s3(**config_data)
 
 
 if __name__ == "__main__":
