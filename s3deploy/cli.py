@@ -83,12 +83,13 @@ def list_versions(ctx, bucket, config_file):
 @cli.command(name="upload", cls=CommandWithConfigFile("config_file"))
 @click.option("--bucket", "-b", "bucket_name", type=str, required=True)
 @click.option("--named_branch",  "named_branch",is_flag=True, default=False, help="Print more output.")
+@click.option("--noop",  "-n",is_flag=True, default=False, help="Print more output.")
 @click.option("--base_dir","-d",   "base_dir", type=str, default=get_file_dir(), required=False)
 @click.option("--url", "-u", "url_name", type=str, required=False)
 @click.option("--config_file", "-c", type=click.Path(), required=True)
 @click.option("--git_branch","-g", type=str, default=None, required=False)
 @click.pass_context
-def upload_version(ctx,  bucket_name, named_branch ,base_dir, url_name, git_branch, config_file):
+def upload_version(ctx,  bucket_name, named_branch ,base_dir, url_name, git_branch, config_file, noop):
     print("bucket: {}".format(bucket_name))
     print("config_file: {}".format(config_file))
     print("base_dir: {}".format(base_dir))

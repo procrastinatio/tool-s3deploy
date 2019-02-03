@@ -172,8 +172,19 @@ def upload_to_s3(s3, cfg):
                         
     #with open('mf-geoadmin3_s3deploy.json', 'w') as f:
     #    f.write(json.dumps(files, indent=4))
+    
     for f in files:
+        if cfg['noop']:
+           if 'Cesium' not in f['local_name'] and 'awesome' not in f['local_name']:
+               print(json.dumps(f, indent=4))
+        else:
              save_to_s3(s3, **f)
+             
+ 
+def upload(myfile):
+        bucket = conn.get_bucket("parallel_upload_tests")
+        key = bucket.new_key(myfile).set_contents_from_string('some content')
+        return myfile
              
 def save_to_s3(s3, local_name=None, remote_name=None, bucket_name=None, to_compress=False, cached=True, mimetype=None, break_on_error=False, **kwargs):
     try:
