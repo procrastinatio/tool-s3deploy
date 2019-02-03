@@ -5,7 +5,7 @@ import boto3
 import re
 import json
 
-from utils import _unzip_data
+from utils import _unzip_data, is_cached, get_file_mimetype
 
 from git import create_s3_dir_path
 
@@ -166,10 +166,39 @@ def upload_to_s3(bucket_name, base_dir, deploy_target, named_branch, git_branch)
                   'robots.txt', 'robots_prod.txt', 'favicon.ico',
                   'checker', 'geoadmin.%s.appcache' % version)
     
+    
+    files = []
+    
     for directory in upload_directories:
         for file_path_list in os.walk(os.path.join(base_dir, directory)):
             file_names = file_path_list[2]
             if len(file_names) > 0:
                 file_base_path = file_path_list[0]
                 for file_name in file_names:
-                    print(file_name)
+                    if len([p for p in exclude_filename_patterns if p in file_name]) == 0:
+                        # files in prd/cache i.e. prd/cache/layersConfig.en.json and prd/cache/services
+                        is_chsdi_cache = bool(file_base_path.endswith('cache'))
+                        local_file = os.path.join(file_base_path, file_name)
+                        relative_file_path = file_base_path.replace('cache', '')
+                        if directory == 'prd':
+                            # Take only files directly in prd/
+                            if file_name in root_files and relative_file_path.endswith('prd'):
+                                relative_file_path = relative_file_path.replace('prd', '')
+                            else:
+                                relative_file_path = relative_file_path.replace('prd', version)
+                        relative_file_path = relative_file_path.replace(base_dir + '/', '')
+                        remote_file = os.path.join(s3_dir_path, relative_file_path, file_name)
+                        # Don't cache some files
+                        cached = is_cached(file_name, named_branch)
+                        mimetype = get_file_mimetype(local_file)
+                        
+                        file_dict = {'local_name': local_file, 'remote_name':  remote_file,'bucket_name':  bucket_name,'cached': cached, 'mimetype':mimetype,
+                                     'is_chsdi_cache': is_chsdi_cache}
+                        
+                        files.append(file_dict)
+                        
+    #with open('mf-geoadmin3_s3deploy.json', 'w') as f:
+    #    f.write(json.dumps(files, indent=4))
+    for f in files:
+        if f['is_chsdi_cache']:
+          print(f)
