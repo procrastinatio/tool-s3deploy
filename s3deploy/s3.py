@@ -1,5 +1,7 @@
 import sys
+import os
 import json
+from datetime import datetime
 import re
 import botocore
 import boto3
@@ -127,13 +129,61 @@ many version
 '''
 
 
-def version_exists(s3_path):
+def version_exists(bucket, s3_path):
     """Check if a given version exists in the given bucket
     
     """
     files = bucket.objects.filter(Prefix=str(s3_path)).all()
     return len(list(files)) > 0
 
+def activate_version(s3_path, bucket_name, deploy_target):
+    print(deploy_target,'activate_version')
+    s3, s3client, bucket = init_connection(bucket_name)
+     
+    if version_exists(bucket, s3_path) is False:
+        print('Version <{}> does not exists in Bucket {}. Aborting'.format(s3_path, bucket_name))
+        sys.exit(1)
+
+    msg = input('Are you sure you want to activate version <%s>?\n' % s3_path)
+    if msg.lower() in ('y', 'yes'):
+        # Prod files
+        for n in ('index', 'embed', 'mobile', '404'):
+            src_key_name = '{}/{}.html'.format(s3_path, n)
+            print('{} --> {}.html'.format(src_key_name, n))
+            s3client.copy_object(
+                Bucket=bucket_name,
+                CopySource=bucket_name + '/' + src_key_name,
+                Key=n + '.html',
+                ACL='public-read')
+        # Delete older appcache files
+        appcache_versioned_files = list(bucket.objects.filter(Prefix='geoadmin.').all())
+        indexes = [{'Key': k.key} for k in appcache_versioned_files if k.key.endswith('.appcache')]
+        if len(indexes) > 0:
+            s3client.delete_objects(Bucket=bucket_name, Delete={'Objects': indexes})
+
+        appcache = None
+        files = list(bucket.objects.filter(Prefix='{}/geoadmin.'.format(s3_path)).all())
+        if len(files) > 0:
+            appcache = os.path.basename(sorted(files)[-1].key)
+        for j in ('robots.txt', 'checker', 'favicon.ico', appcache):
+            # In prod move robots prod
+            src_file_name = 'robots_prod.txt' if j == 'robots.txt' and deploy_target == 'prod' else j
+            src_key_name = '{}/{}'.format(s3_path, src_file_name)
+            print('%s ---> %s' % (src_key_name, j))
+            try:
+                s3client.copy_object(
+                    Bucket=bucket_name,
+                    CopySource=bucket_name + '/' + src_key_name,
+                    Key=j,
+                    CopySourceIfModifiedSince=datetime(2015, 1, 1),
+                    ACL='public-read')
+            except botocore.exceptions.ClientError as e:
+                print('Cannot copy {}: {}'.format(j, e))
+        print('\nPlease check it on:\n{}'.format(get_url(deploy_target)))
+        print('And:\n{}'.format(get_url(deploy_target, key_name=s3_path + '/src/index.html')))
+    else:
+        print('Aborting activation of version {}'.format(s3_path))
+        sys.exit(1)
 
 def list_version(bucket):
     """List all versions in a given bucket

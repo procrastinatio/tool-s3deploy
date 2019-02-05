@@ -5,7 +5,7 @@ import click
 import json
 import yaml
 
-from s3 import init_connection, list_version, version_info, upload_to_s3
+from s3 import init_connection, list_version, version_info, upload_to_s3, activate_version
 
 
 def get_file_dir():
@@ -78,6 +78,28 @@ def list_versions(ctx, bucket, config_file):
     s3, s3client, bucket = init_connection(bucket)
 
     print(list_version(bucket))
+    
+    
+    
+@cli.command(name="activate", cls=CommandWithConfigFile("config_file"))
+@click.option("--bucket", "-b", "bucket_name",  type=str, required=True)
+@click.option("--target", "-t", "deploy_target", type=str, required=False)
+@click.option("--config_file", "-c", type=click.Path(), required=True)
+@click.option("--version", "s3_path",  required=True)
+def version_activate( bucket_name, s3_path, deploy_target, config_file):
+    print("bucket: {}".format(bucket_name))
+    
+   
+    
+    if deploy_target is None:
+        deploy_target = 'prod' if 'prod' in bucket_name else None
+    
+    
+    activate_version( s3_path, bucket_name, deploy_target)
+    
+    
+    
+    
 
 
 @cli.command(name="upload", cls=CommandWithConfigFile("config_file"))
@@ -133,4 +155,4 @@ def upload_version(
 
 if __name__ == "__main__":
     cli()
-    # main('my_arg --config_file dummy.yaml'.split())
+

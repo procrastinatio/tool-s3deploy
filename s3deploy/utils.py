@@ -65,7 +65,8 @@ aws s3 ls   s3://$S3_MF_GEOADMIN3_PROD/master/eebba2c/1807181149/src/
 
 
 '''
-
+def is_chsdi_cache(pathname):
+    return bool(pathname.endswith('cache'))
 
 def geoadmin_relative_file_path_rule(
         base_dir,
@@ -87,7 +88,7 @@ def geoadmin_relative_file_path_rule(
 
     # files in prd/cache i.e. prd/cache/layersConfig.en.json and
     # prd/cache/service
-    if bool(file_base_path.endswith('cache')):
+    if is_chsdi_cache(file_base_path):
         relative_file_path = version
 
     return relative_file_path
@@ -153,7 +154,7 @@ def get_files_to_upload(
                             'bucket_name': bucket_name,
                             'cached': cached,
                             'mimetype': mimetype,
-                            'is_chsdi_cache': is_chsdi_cache,
+                            'is_chsdi_cache': is_chsdi_cache(file_base_path),
                             'to_compress': to_compress}
 
                         files.append(file_dict)
